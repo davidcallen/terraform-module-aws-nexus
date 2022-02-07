@@ -1,0 +1,76 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${aws_ec2_instance_name}
+fqdn: ${aws_ec2_instance_name}.parkrunpointsleague.org
+manage_etc_hosts: true
+
+write_files:
+- path: /usr/local/etc/prpl-initial-startup.config
+  owner: root:root
+  permissions: '0600'
+  content: |
+    #!/bin/bash
+    AWS_EC2_INSTANCE_NAME=${aws_ec2_instance_name}
+    AWS_REGION=${aws_region}
+    AWS_ZONES=(${aws_zones})
+    PRPL_MOTD_MSG="Welcome to ParkRun Points League : Nexus"
+    PRPL_INIT_DEBUG_ENABLED=TRUE  # unset this var to disable
+
+- path: /usr/local/etc/prpl-initial-startup_cloudwatch.config
+  owner: root:root
+  permissions: '0640'
+  content: |
+    #!/bin/bash
+    CLOUDWATCH_ENABLED=${cloudwatch_enabled}
+    CLOUDWATCH_REFRESH_INTERVAL_SECS=${cloudwatch_refresh_interval_secs}
+
+- path: /usr/local/etc/prpl-initial-startup_telegraf.config
+  owner: telegraf:telegraf
+  permissions: '0640'
+  content: |
+    #!/bin/bash
+    TELEGRAF_ENABLED=${telegraf_enabled}
+    TELEGRAF_INFLUXDB_URL="${telegraf_influxdb_url}"
+    TELEGRAF_INFLUXDB_PASSWORD="${telegraf_influxdb_password}"
+    TELEGRAF_INFLUXDB_RETENTION_POLICY=${telegraf_influxdb_retention_policy}
+    TELEGRAF_INFLUXDB_HTTPS_INSECURE_SKIP_VERIFY=${telegraf_influxdb_https_insecure_skip_verify}
+
+- path: /usr/local/etc/prpl-initial-startup_mount-file-system.config
+  owner: root:root
+  permissions: '0600'
+  content: |
+    #!/bin/bash
+    FILE_SYSTEM_MOUNT_POINT=/mnt/nexus
+    FILE_SYSTEM_MOUNT_TARGET=/var/nexus
+    FILE_SYSTEM_MOUNT_OWNER_USER=${nexus_linux_user_name}
+    FILE_SYSTEM_MOUNT_OWNER_GROUP=${nexus_linux_user_group}
+    FILE_SYSTEM_AWS_EFS_ID=${aws_efs_id}
+    FILE_SYSTEM_AWS_EBS_DEVICE_NAME=${ebs_device_name}
+    AWS_ASG_NAME=${aws_asg_name}
+    CHECK_EFS_ASG_MAX_ATTEMPTS=${check_efs_asg_max_attempts}
+
+- path: /usr/local/etc/prpl-initial-startup_app.config
+  owner: nexus:nexus
+  permissions: '0640'
+  content: |
+    #!/bin/bash
+    APP_LINUX_USER_NAME=${nexus_linux_user_name}
+    APP_LINUX_USER_GROUP=${nexus_linux_user_group}
+    # APP_SSH_PUBLIC_KEY="$ { nexus_user_ssh_public_key } "
+    APP_SSH_PUBLIC_KEY=
+    APP_SYSTEMD_SERVICE_NAME="nexus"
+    # APP_CONFIG_S3_BUCKET_NAME="s3://$ { nexus_config_s3_bucket_name } "
+    APP_ADMIN_USER_PASSWORD_SECRET_ID="${nexus_admin_user_password_secret_id}"
+    APP_NEXUS_JENKINS_USER_PASSWORD_SECRET_ID="${nexus_jenkins_user_password_secret_id}"
+
+
+#- path: /var/nexus/nexus.yaml
+#  owner: nexus:nexus
+#  permissions: '0660'
+#  encoding: b64
+#  content: $ { nexus_jcasc_config_file_contents_base64 }
+
+runcmd:
+  - /usr/local/bin/prpl-initial-startup_all.sh
+
+output: {all: '| tee -a /var/log/cloud-init-output.log'}
