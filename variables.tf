@@ -285,7 +285,7 @@ variable "telegraf_influxdb_url" {
   type    = string
   default = ""
 }
-variable "telegraf_influxdb_password" {
+variable "telegraf_influxdb_password_secret_id" {
   type      = string
   default   = ""
   sensitive = true

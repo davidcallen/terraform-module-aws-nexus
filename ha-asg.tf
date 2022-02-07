@@ -74,7 +74,7 @@ resource "aws_launch_configuration" "nexus" {
     cloudwatch_refresh_interval_secs             = var.cloudwatch_refresh_interval_secs
     telegraf_enabled                             = var.telegraf_enabled ? "TRUE" : "FALSE"
     telegraf_influxdb_url                        = var.telegraf_influxdb_url
-    telegraf_influxdb_password                   = var.telegraf_influxdb_password
+    telegraf_influxdb_password_secret_id         = var.telegraf_influxdb_password_secret_id
     telegraf_influxdb_retention_policy           = var.telegraf_influxdb_retention_policy
     telegraf_influxdb_https_insecure_skip_verify = var.telegraf_influxdb_https_insecure_skip_verify
   })

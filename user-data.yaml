@@ -31,7 +31,7 @@ write_files:
     #!/bin/bash
     TELEGRAF_ENABLED=${telegraf_enabled}
     TELEGRAF_INFLUXDB_URL="${telegraf_influxdb_url}"
-    TELEGRAF_INFLUXDB_PASSWORD="${telegraf_influxdb_password}"
+    TELEGRAF_INFLUXDB_PASSWORD_SECRET_ID="${telegraf_influxdb_password_secret_id}"
     TELEGRAF_INFLUXDB_RETENTION_POLICY=${telegraf_influxdb_retention_policy}
     TELEGRAF_INFLUXDB_HTTPS_INSECURE_SKIP_VERIFY=${telegraf_influxdb_https_insecure_skip_verify}
 
