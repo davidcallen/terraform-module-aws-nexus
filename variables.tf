@@ -28,6 +28,16 @@ variable "hostname_fqdn" {
   default     = ""
   type        = string
 }
+variable "route53_enabled" {
+  description = "If using Route53 for DNS resolution"
+  default     = false
+  type        = bool
+}
+variable "route53_private_hosted_zone_id" {
+  description = "Route53 Private Hosted Zone ID (if in use)."
+  default     = ""
+  type        = string
+}
 variable "environment" {
   description = "Environment information e.g. account IDs, public/private subnet cidrs"
   type = object({
