@@ -33,6 +33,11 @@ variable "route53_enabled" {
   default     = false
   type        = bool
 }
+variable "route53_direct_dns_update_enabled" {
+  description = "If using direct add/update of hostname DNS record to Route53"
+  default     = false
+  type        = bool
+}
 variable "route53_private_hosted_zone_id" {
   description = "Route53 Private Hosted Zone ID (if in use)."
   default     = ""

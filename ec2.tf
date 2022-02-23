@@ -15,20 +15,19 @@ resource "aws_instance" "nexus" {
   }
   disable_api_termination = var.environment.resource_deletion_protection
   user_data = templatefile("${path.module}/user-data.yaml", {
-    aws_region                     = var.aws_region,
-    aws_zones                      = join(" ", var.aws_zones[*]),
-    aws_ec2_instance_name          = local.name
-    aws_ec2_instance_hostname_fqdn = var.hostname_fqdn
-    route53_enabled                = var.route53_enabled
-    route53_private_hosted_zone_id = var.route53_private_hosted_zone_id
-    disk_nexus_home_enable         = var.disk_nexus_home.enabled
-    disk_nexus_home_type           = var.disk_nexus_home.type
-    aws_efs_id                     = (var.disk_nexus_home.enabled && var.disk_nexus_home.type == "EFS") ? aws_efs_file_system.nexus-home-efs[0].id : ""
-    ebs_device_name                = (var.disk_nexus_home.enabled && var.disk_nexus_home.type == "EBS") ? "/dev/nvme1n1" : ""
-    aws_asg_name                   = ""
-    check_efs_asg_max_attempts     = var.ha_auto_scaling_group.check_efs_asg_max_attempts
-    nexus_linux_user_name          = var.nexus_linux_user_name
-    nexus_linux_user_group         = var.nexus_linux_user_group
+    aws_region                        = var.aws_region,
+    aws_zones                         = join(" ", var.aws_zones[*]),
+    aws_ec2_instance_name             = local.name
+    aws_ec2_instance_hostname_fqdn    = var.hostname_fqdn
+    route53_enabled                   = var.route53_enabled ? "TRUE" : "FALSE"
+    route53_direct_dns_update_enabled = var.route53_direct_dns_update_enabled ? "TRUE" : "FALSE"
+    route53_private_hosted_zone_id    = var.route53_private_hosted_zone_id
+    aws_efs_id                        = (var.disk_nexus_home.enabled && var.disk_nexus_home.type == "EFS") ? aws_efs_file_system.nexus-home-efs[0].id : ""
+    ebs_device_name                   = (var.disk_nexus_home.enabled && var.disk_nexus_home.type == "EBS") ? "/dev/nvme1n1" : ""
+    aws_asg_name                      = ""
+    check_efs_asg_max_attempts        = var.ha_auto_scaling_group.check_efs_asg_max_attempts
+    nexus_linux_user_name             = var.nexus_linux_user_name
+    nexus_linux_user_group            = var.nexus_linux_user_group
     //    nexus_user_ssh_public_key   = var.nexus_user_ssh_public_key
     //    nexus_config_s3_bucket_name = aws_s3_bucket.nexus-config-files.bucket
     nexus_admin_user_password_secret_id          = var.nexus_admin_user_password_secret_id
