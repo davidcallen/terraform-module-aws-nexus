@@ -17,7 +17,7 @@ resource "aws_acm_certificate" "nexus-amazon-provider" {
     (var.ha_public_load_balancer.enabled && var.ha_public_load_balancer.ssl_cert.use_amazon_provider)
     || (var.ha_private_load_balancer.enabled && var.ha_private_load_balancer.ssl_cert.use_amazon_provider))
   ) ? 1 : 0
-  domain_name       = var.hostname_fqdn
+  domain_name       = var.ha_public_load_balancer.hostname_fqdn
   validation_method = "DNS"
   tags = merge(var.global_default_tags, var.environment.default_tags, {
     Name            = "${local.name}-alb-public"
@@ -27,6 +27,79 @@ resource "aws_acm_certificate" "nexus-amazon-provider" {
   lifecycle {
     create_before_destroy = true
   }
+}
+locals {
+  https_cert_domain_validation_options = (var.route53_enabled && var.ha_high_availability_enabled && (
+    (var.ha_public_load_balancer.enabled && var.ha_public_load_balancer.ssl_cert.use_amazon_provider)
+    || (var.ha_private_load_balancer.enabled && var.ha_private_load_balancer.ssl_cert.use_amazon_provider))
+  ) ? aws_acm_certificate.nexus-amazon-provider[0].domain_validation_options : []
+}
+resource "aws_route53_record" "nexus-amazon-provider-https-cert-validation" {
+  for_each = {
+    for dvo in local.https_cert_domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_public_hosted_zone_id
+}
+resource "aws_acm_certificate_validation" "nexus-amazon-provider" {
+  count = (var.route53_enabled && var.ha_high_availability_enabled && (
+    (var.ha_public_load_balancer.enabled && var.ha_public_load_balancer.ssl_cert.use_amazon_provider)
+    || (var.ha_private_load_balancer.enabled && var.ha_private_load_balancer.ssl_cert.use_amazon_provider))
+  ) ? 1 : 0
+  certificate_arn         = aws_acm_certificate.nexus-amazon-provider[0].arn
+  validation_record_fqdns = [for record in aws_route53_record.nexus-amazon-provider-https-cert-validation : record.fqdn]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Route53 DNS for the Load Balancers
+# ---------------------------------------------------------------------------------------------------------------------
+data "aws_alb" "application-load-balancer-public" {
+  count = (var.ha_high_availability_enabled && var.ha_public_load_balancer.enabled) ? 1 : 0
+  arn   = var.ha_public_load_balancer.arn
+}
+resource "aws_route53_record" "nexus-amazon-provider-public-dns" {
+  count           = (var.route53_enabled && var.ha_high_availability_enabled && var.ha_public_load_balancer.enabled) ? 1 : 0
+  allow_overwrite = true
+  name            = var.ha_public_load_balancer.hostname_fqdn
+  records         = [data.aws_alb.application-load-balancer-public[0].dns_name]
+  ttl             = 60
+  type            = "CNAME"
+  zone_id         = var.route53_public_hosted_zone_id
+}
+# If Public ALB and no Private ALB then use Public ALB DNS on the PrivateHZ (otherwise DNS resolution will fail)
+resource "aws_route53_record" "nexus-amazon-provider-private-dns-for-public-alb" {
+  count = (var.route53_enabled && var.ha_high_availability_enabled
+    && var.ha_public_load_balancer.enabled
+    && var.ha_private_load_balancer.enabled == false
+  ) ? 1 : 0
+  allow_overwrite = true
+  name            = var.ha_public_load_balancer.hostname_fqdn
+  records         = [data.aws_alb.application-load-balancer-public[0].dns_name]
+  ttl             = 60
+  type            = "CNAME"
+  zone_id         = var.route53_private_hosted_zone_id
+}
+# For Private ALB
+data "aws_alb" "application-load-balancer-private" {
+  count = (var.route53_enabled && var.ha_high_availability_enabled && var.ha_private_load_balancer.enabled) ? 1 : 0
+  arn   = var.ha_private_load_balancer.arn
+}
+resource "aws_route53_record" "nexus-amazon-provider-private-dns-for-private-alb" {
+  count           = (var.route53_enabled && var.ha_high_availability_enabled && var.ha_private_load_balancer.enabled) ? 1 : 0
+  allow_overwrite = true
+  name            = var.ha_private_load_balancer.hostname_fqdn
+  records         = [data.aws_alb.application-load-balancer-private[0].dns_name]
+  ttl             = 60
+  type            = "CNAME"
+  zone_id         = var.route53_private_hosted_zone_id
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

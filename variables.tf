@@ -38,6 +38,11 @@ variable "route53_direct_dns_update_enabled" {
   default     = false
   type        = bool
 }
+variable "route53_public_hosted_zone_id" {
+  description = "Route53 Public Hosted Zone ID (if in use)."
+  default     = ""
+  type        = string
+}
 variable "route53_private_hosted_zone_id" {
   description = "Route53 Private Hosted Zone ID (if in use)."
   default     = ""
@@ -72,15 +77,12 @@ variable "environment" {
 variable "vpc" {
   description = "VPC information. These are inputs to the VPC module github.com/terraform-aws-modules/terraform-aws-vpc.git"
   type = object({
-    vpc_id = string
-    # VPC cidr block. Must not overlap with other VPCs in this aws account or others within our organisation.
-    cidr_block = string
-    # List of VPC private subnet cidr blocks. Must not overlap with other VPCs in this aws account or others within our organisation.
+    vpc_id                      = string # VPC cidr block. Must not overlap with other VPCs in this aws account or others within our organisation.
+    cidr_block                  = string # Must not overlap with other VPCs in this aws account or others within our organisation.
     private_subnets_cidr_blocks = list(string)
-    private_subnets_ids         = list(string)
-    # List of VPC public subnet cidr blocks. Must not overlap with other VPCs in this aws account or others within our organisation.
-    public_subnets_cidr_blocks = list(string)
-    public_subnets_ids         = list(string)
+    private_subnets_ids         = list(string) # List of VPC public subnet cidr blocks. Must not overlap with other VPCs in this aws account or others within our organisation.
+    public_subnets_cidr_blocks  = list(string)
+    public_subnets_ids          = list(string)
   })
   default = {
     vpc_id                      = ""
@@ -99,14 +101,14 @@ variable "ha_high_availability_enabled" {
 variable "ha_public_load_balancer" {
   description = "High Availability Public Load Balancer config"
   type = object({
-    enabled    = bool
-    arn        = string
-    arn_suffix = string
-    port       = number
+    enabled       = bool
+    arn           = string
+    arn_suffix    = string
+    hostname_fqdn = string
+    port          = number
     ssl_cert = object({
-      use_amazon_provider = bool
-      # Has the overhead of needing external DNS verification to activate it
-      use_self_signed = bool
+      use_amazon_provider = bool # Has the overhead of needing external DNS verification to activate it
+      use_self_signed     = bool
     })
     alb_listener_arn      = string
     alb_listener_priority = number
@@ -114,18 +116,17 @@ variable "ha_public_load_balancer" {
     allowed_ingress_cidrs = object({
       https = list(string)
     })
-    disallow_ingress_internal_health_check_from_cidrs = list(string)
-    # Dont want users reaching internal healthcheck page
+    disallow_ingress_internal_health_check_from_cidrs = list(string) # Dont want users reaching internal healthcheck page
   })
   default = {
-    enabled    = false
-    arn        = ""
-    arn_suffix = ""
-    port       = 443
+    enabled       = false
+    arn           = ""
+    arn_suffix    = ""
+    hostname_fqdn = ""
+    port          = 443
     ssl_cert = {
-      use_amazon_provider = true
-      # Has the overhead of needing external DNS verification to activate it
-      use_self_signed = false
+      use_amazon_provider = true # Has the overhead of needing external DNS verification to activate it
+      use_self_signed     = false
     }
     alb_listener_arn      = ""
     alb_listener_priority = 100
@@ -139,14 +140,14 @@ variable "ha_public_load_balancer" {
 variable "ha_private_load_balancer" {
   description = "High Availability Private Load Balancer config"
   type = object({
-    enabled    = bool
-    arn        = string
-    arn_suffix = string
-    port       = number
+    enabled       = bool
+    arn           = string
+    arn_suffix    = string
+    hostname_fqdn = string
+    port          = number
     ssl_cert = object({
-      use_amazon_provider = bool
-      # Has the overhead of needing external DNS verification to activate it
-      use_self_signed = bool
+      use_amazon_provider = bool # Has the overhead of needing external DNS verification to activate it
+      use_self_signed     = bool
     })
     alb_listener_arn      = string
     alb_listener_priority = number
@@ -154,18 +155,17 @@ variable "ha_private_load_balancer" {
     allowed_ingress_cidrs = object({
       https = list(string)
     })
-    disallow_ingress_internal_health_check_from_cidrs = list(string)
-    # Dont want users reaching internal healthcheck page
+    disallow_ingress_internal_health_check_from_cidrs = list(string) # Dont want users reaching internal healthcheck page
   })
   default = {
-    enabled    = false
-    arn        = ""
-    arn_suffix = ""
-    port       = 443
+    enabled       = false
+    arn           = ""
+    arn_suffix    = ""
+    hostname_fqdn = ""
+    port          = 443
     ssl_cert = {
-      use_amazon_provider = true
-      # Has the overhead of needing external DNS verification to activate it
-      use_self_signed = false
+      use_amazon_provider = true # Has the overhead of needing external DNS verification to activate it
+      use_self_signed     = false
     }
     alb_listener_arn      = ""
     alb_listener_priority = 100
@@ -186,10 +186,8 @@ variable "ha_auto_scaling_group" {
     check_efs_asg_max_attempts     = number
     max_size                       = number
     min_size                       = number
-    desired_capacity               = number
-    # This only makes sense when below scaling_policy.enabled = false
-    target_group_name_prefix = string
-    # Max 20 chars !! due to limitation on length of ASG TargetGroups which need to be unique
+    desired_capacity               = number # This only makes sense when below scaling_policy.enabled = false
+    target_group_name_prefix       = string # Max 20 chars !! due to limitation on length of ASG TargetGroups which need to be unique
   })
   default = {
     health_check_grace_period      = 300
@@ -199,9 +197,8 @@ variable "ha_auto_scaling_group" {
     check_efs_asg_max_attempts     = 60
     max_size                       = 3
     min_size                       = 1
-    desired_capacity               = -1
-    # This only makes sense when below scaling_policy.enabled = false
-    target_group_name_prefix = ""
+    desired_capacity               = -1 # This only makes sense when below scaling_policy.enabled = false
+    target_group_name_prefix       = ""
   }
 }
 
@@ -209,6 +206,41 @@ variable "name_suffix" {
   description = "The AWS name suffix for AWS resources"
   type        = string
   default     = ""
+}
+variable "domain_name" {
+  type        = string
+  description = "DNS Domain name"
+  default     = ""
+}
+variable "domain_netbios_name" {
+  type        = string
+  description = "NetBIOS Domain name (aka Legacy Domain Name). Limited to 15 chars and in UPPERCASE."
+  default     = ""
+}
+variable "domain_join_user_name" {
+  type        = string
+  description = ""
+  default     = ""
+}
+variable "domain_join_user_password" {
+  type        = string
+  description = ""
+  default     = ""
+}
+variable "domain_login_allowed_users" {
+  type        = list(string)
+  description = "Active Directory User Names that allowed to RDP login to computer"
+  default     = []
+}
+variable "domain_login_allowed_groups" {
+  type        = list(string)
+  description = "Active Directory Groups that allowed to RDP login to computer"
+  default     = []
+}
+variable "domain_security_group_ids" {
+  type        = list(string)
+  description = "The IDs of any Domain-related security groups to be applied"
+  default     = []
 }
 variable "aws_instance_type" {
   type = string

@@ -29,13 +29,11 @@ resource "aws_autoscaling_group" "nexus" {
   default_cooldown     = var.ha_auto_scaling_group.default_cooldown # Start the failover instance quickly
   termination_policies = ["OldestInstance"]
   suspended_processes  = var.ha_auto_scaling_group.suspended_processes
-  tags = [
-    {
-      key                 = "Name"
-      value               = local.asg_name
-      propagate_at_launch = true
-    }
-  ]
+  tags {
+    key                 = "Name"
+    value               = local.asg_name
+    propagate_at_launch = true
+  }
 }
 locals {
   vpc_security_group_ids_storage = (var.disk_nexus_home.enabled && var.disk_nexus_home.type == "EFS") ? [aws_security_group.nexus-home-efs[0].id] : []
@@ -48,7 +46,7 @@ resource "aws_launch_configuration" "nexus" {
   image_id             = var.aws_ami_id
   instance_type        = var.aws_instance_type
   iam_instance_profile = var.iam_instance_profile
-  security_groups      = [aws_security_group.nexus.id]
+  security_groups      = local.vpc_security_group_ids
   key_name             = var.aws_ssh_key_name
   root_block_device {
     delete_on_termination = true
